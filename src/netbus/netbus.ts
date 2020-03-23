@@ -1,6 +1,6 @@
 import net from 'net';
 import ws from 'ws';
-import { Log } from '@/utils/log';
+import { Log, Level } from '@/utils/log';
 import { Tcppkg } from './tcppkg';
 export enum PROTO_TYPE {
     PROTO_JSON = 1,
@@ -89,12 +89,21 @@ export class netbus {
     public add_client_session_event(session: any, proto_type: PROTO_TYPE): void {
         session.on("close", this._on_session_exit.apply(this, session));
 
+        //接入data
         session.on("data", (data) => { this._deal_session_data(session, data) });
 
+        session.on("error", (err) => {
+            // Log.Instance.Error(Level.ERROR, "session err code" + err);
+        });
 
-
+        this.on_session_enter(session, proto_type, false);
     }
 
+    /**
+     * 处理接入的数据
+     * @param session 传入的session 
+     * @param data 传入的数据
+     */
     private _deal_session_data(session: any, data: any): void {
 
         //
@@ -128,14 +137,131 @@ export class netbus {
 
             //收到一个完整的数据包
             if (session.proto_type == PROTO_TYPE.PROTO_JSON) {
-                
+                const _json_str: string = _last_pkg.toString("utf8", _offset + 2, _offset + _pkg_len);
+                if (!_json_str) {
+                    this.session_close(session);
+                    return;
+                }
+                this._on_session_recv_cmd(session, _json_str);
+
+            } else {
+                _cmd_buf = Buffer.allocUnsafe(_pkg_len - 2); // 2个长度信息
+                _last_pkg.copy(_cmd_buf, 0, _offset + 2, _offset + _pkg_len);
+                this._on_session_recv_cmd(session, _cmd_buf);
             }
+
+            _offset += _pkg_len;
+            if (_offset >= _last_pkg.length) {//正好包处理完了
+                break;
+            }
+
+            _pkg_len = Tcppkg.Instance.read_pkc_size(_last_pkg, _offset);
+            if (_pkg_len < 0) {
+                break;
+            }
+
         }
 
+        //能处理的数据包已经处理完成，保存
+        if (_offset >= _last_pkg.length) {
+            _last_pkg = null;
+        } else {
+            // offset ,length这段数据拷贝到新的Buffer里面
+            const buf: Buffer = Buffer.allocUnsafe(_last_pkg.length - _offset);
+            _last_pkg.copy(buf, 0, _offset, _last_pkg.length);
+            _last_pkg = buf;
+        }
+        session.last_pkg = _last_pkg;
 
     }
 
+    /**
+     * 启动tcp服务
+     * @param ip 地址
+     * @param port 端口
+     * @param proto_type 类型 
+     */
+    public start_tcp_server(ip: string, port: number, proto_type: PROTO_TYPE): void {
+        // Log.Instance.Info("start tcp server .. ")
+        const server: net.Server = net.createServer((client_sock) => {
+            this.add_client_session_event(client_sock, proto_type);
+        });
 
+
+        //监听事件
+        server.on("error", () => {
+            //报错
+        });
+
+        server.on("close", () => {
+            //关闭
+        });
+
+        server.listen({
+            port: port,
+            host: ip,
+            exclusive: true,
+        });
+    }
+
+
+    /** */
+    private _checkSring(obj: any): boolean {
+        return Object.prototype.toString.call(obj) == "[object String]"
+
+    }
+
+    private _ws_add_client_session_event(session: any, proto_type: PROTO_TYPE): void {
+
+        // 注册监听
+        session.on("close", () => {
+            this._on_session_exit(session);
+        });
+
+        session("error", () => {
+            //
+        });
+
+        session.on("message", (data) => {
+            if (session.proto_type == PROTO_TYPE.PROTO_JSON) {
+                //
+                if (!this._checkSring(data)) {
+                    this.session_close(session);
+                    return;
+                }
+
+            } else {
+                if (!Buffer.isBuffer(data)) {
+                    this.session_close(session);
+                    return;
+                }
+            }
+            this._on_session_recv_cmd(session, data);
+        });
+
+        this.on_session_enter(session, proto_type, true);
+    }
+
+    public start_ws_server(ip: string, port: number, proto_type: PROTO_TYPE): void {
+        const server:ws.Server = new ws.Server({
+            host: ip,
+            port: port,
+        });
+
+
+        server.on("connection", (data)=>{
+            this._ws_add_client_session_event(data,proto_type);
+        });
+        //
+        server.on("error", ()=>{
+            //
+        });
+        //
+        server.on("close", ()=>{
+            //
+        });
+
+    }
 
 
 }
