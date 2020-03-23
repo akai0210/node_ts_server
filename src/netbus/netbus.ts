@@ -6,7 +6,7 @@ export enum PROTO_TYPE {
     PROTO_JSON = 1,
     PROTO_BUF = 2,
 }
-export class netbus {
+export default class netbus {
 
     //全局session缓存?
     private _global_session_list: { [key: number]: any } = {};
@@ -93,7 +93,7 @@ export class netbus {
         session.on("data", (data) => { this._deal_session_data(session, data) });
 
         session.on("error", (err) => {
-            // Log.Instance.Error(Level.ERROR, "session err code" + err);
+            Log.Instance.Error(Level.ERROR, "session err code" + err);
         });
 
         this.on_session_enter(session, proto_type, false);
@@ -189,8 +189,10 @@ export class netbus {
 
 
         //监听事件
-        server.on("error", () => {
+        server.on("error", (err) => {
             //报错
+            Log.Instance.Error(Level.ERROR, "tcp session err code" + err);
+
         });
 
         server.on("close", () => {
@@ -215,11 +217,13 @@ export class netbus {
 
         // 注册监听
         session.on("close", () => {
+            Log.Instance.log(Level.INFO, "ws session close " );
             this._on_session_exit(session);
         });
 
-        session("error", () => {
+        session("error", (err) => {
             //
+            Log.Instance.Error(Level.ERROR, "ws session err code" + err);
         });
 
         session.on("message", (data) => {
@@ -253,12 +257,14 @@ export class netbus {
             this._ws_add_client_session_event(data,proto_type);
         });
         //
-        server.on("error", ()=>{
+        server.on("error", (err)=>{
             //
+            Log.Instance.Error(Level.ERROR, "ws start server err code" + err);
         });
         //
         server.on("close", ()=>{
             //
+            Log.Instance.Warn(Level.INFO, "ws start server close ");
         });
 
     }

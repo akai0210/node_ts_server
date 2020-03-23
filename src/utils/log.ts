@@ -34,22 +34,22 @@ export class Log {
         this._coloredOutPut = bool;
     }
 
-    public Info(): void {
+    public Info(...message): void {
         if (Level.INFO === this._globalLevel) {
             //写入信息
-            this.log(Level.INFO, _util.format.apply(this, arguments as any));
+            this.log(Level.INFO, message);
         }
     }
 
-    public Warn(): void {
+    public Warn(...message): void {
         if (Level.ERROR === this._globalLevel) {
-            this.log(Level.WARN, _util.format.apply(this, arguments as any));
+            this.log(Level.WARN, message);
         }
     }
 
-    public Error(): void {
+    public Error(...message): void {
         if (Level.ERROR === this._globalLevel) {
-            this.log(Level.ERROR, _util.format.apply(this, arguments as any));
+            this.log(Level.ERROR,message);
         }
     }
 
