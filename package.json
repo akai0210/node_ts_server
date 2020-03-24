@@ -4,7 +4,9 @@
   "description": "node+typescript",
   "main": "app.js",
   "scripts": {
-    "test": "\\"
+    "build": "webpack --watch --config ./build/webpack.config.js",
+    "start": "nodemon ./dist/app.js",
+    "dev": "concurrently \"npm run build\" \"npm run start\""
   },
   "author": "lzk",
   "license": "ISC",
