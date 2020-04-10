@@ -2,7 +2,7 @@
 const path = require('path');
 module.exports = {
 
-    mode: 'prodection',
+    mode: 'none',
     entry: path.resolve(__dirname, "../src/test_netbus_server.ts"),
     module: {
         rules: [
@@ -24,5 +24,5 @@ module.exports = {
         path: path.resolve(__dirname, '../dist')
       },
       target: 'node',
-      externals: nodeModules,
+     
 }

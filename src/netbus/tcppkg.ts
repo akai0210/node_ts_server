@@ -9,7 +9,7 @@ export class Tcppkg {
     }
 
     /**根据封包协议读取包体的长度 */
-    public read_pkc_size(pkg_data: Array<Buffer>, offset: number): number {
+    public read_pkc_size(pkg_data: Buffer, offset: number): number {
         if (offset > pkg_data.length - 2) {
             return -1;
         }
